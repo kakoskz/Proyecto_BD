@@ -1,1 +1,1 @@
-Colocar esto en la carpeta de trabajo de XAMPP htdocs
+Colocar esto en la carpeta de trabajo de XAMPP htdocs, archivo "crear usuario" es temporal, una vez usado eliminar o cambiar datos de usuario si se desea usar nuevamente
