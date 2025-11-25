@@ -1,0 +1,1 @@
+Colocar esto en la carpeta de trabajo de XAMPP htdocs
