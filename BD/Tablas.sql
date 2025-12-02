@@ -2,11 +2,11 @@ CREATE TABLE Users(
     idUser INT IDENTITY(1,1) PRIMARY KEY, -- se da automaticamente el id con un incremento de 1 en 1 por usuario.
     email VARCHAR(300) NOT NULL,
     psswd VARCHAR(255) NOT NULL,
-    since DATETIME DEFAULT GETDATE() --el dia en que se creo el usuario
+    since DATETIME DEFAULT GETDATE(), --el dia en que se creo el usuario
     rol VARCHAR(250) NOT NULL DEFAULT 'Cliente'--"cliente""admin"
 );
 --cliente debe de tener un fk desde users
-CREATE TABLE Client(
+CREATE TABLE Cliente(
     idCliente INT IDENTITY(1,1) PRIMARY KEY, --id asignado automaticamente
     idUser INT NULL,  -- no obligatorio por que para comprar puede hacerlo como invitado
 
@@ -16,11 +16,13 @@ CREATE TABLE Client(
     ciudad VARCHAR(100) NOT NULL,
     genero VARCHAR(50),
     codigoPostal VARCHAR(15), 
-    preferencias VARCHAR(500),         --muchas cosas se pueden omitir ya que no es muy relevante pero sirve
+    preferencias VARCHAR(500)         --muchas cosas se pueden omitir ya que no es muy relevante pero sirve
     
+);
+    ALTER TABLE Cliente 
+    ADD
     CONSTRAINT fk_users
         FOREIGN KEY (idUser) REFERENCES Users(idUser)
-);
 
 CREATE TABLE Empleado(
     idEmpleado INT IDENTITY(1,1) PRIMARY KEY,
@@ -29,12 +31,14 @@ CREATE TABLE Empleado(
     nombreCompleto VARCHAR(250) NOT NULL,
     rut VARCHAR(12) NOT NULL,
     cargo VARCHAR(50)NOT NULL,
-    contrato VARCHAR(50) NOT NULL
-    desde DATETIME DEFAULT GETDATE(),
+    contrato VARCHAR(50) NOT NULL,
+    desde DATETIME DEFAULT GETDATE()
 
+);
+    ALTER TABLE Empleado
+    ADD
     CONSTRAINT fk_users
         FOREIGN KEY (idUser) REFERENCES Users(idUser)
-);
 
 --transaccion necesita fk de cliente
 --transaccion necesita fk de detalle
@@ -45,14 +49,18 @@ CREATE TABLE Transaccion(
 
     fecha DATETIME DEFAULT GETDATE(),
     sucursal VARCHAR(500) NOT NULL,
-    total INT NOT NULL,
+    total INT NOT NULL
 
-    CONSTRAINT fk_cliente
-        FOREIGN KEY (idCliente) REFERENCES Client(idCliente),
-
-    CONSTRAINT fk_empleado
-        FOREIGN KEY (idEmpleado) REFERENCES (idEmpleado)    
 );
+
+ALTER TABLE Transaccion
+    ADD 
+    CONSTRAINT fk_cliente
+        FOREIGN KEY (idCliente) REFERENCES Cliente(idCliente),
+
+    CONSTRAINT fk_Empleado 
+        FOREIGN KEY (idEmpleado) REFERENCES Empleado(idEmpleado)
+        
 --detalle necesita fk de producto
 CREATE TABLE DetalleVenta(
     idDetalle INT IDENTITY(1,1) PRIMARY KEY,
@@ -63,14 +71,18 @@ CREATE TABLE DetalleVenta(
     descuento INT NOT NULL DEFAULT 0,
     precioUnitario INT NOT NULL,
     precioFinal INT NOT NULL,
-    totaLinea INT NOT NULL,
+    totaLinea INT NOT NULL
 
-    CONSTRAINT fk_detalle_venta
+);
+    ALTER TABLE DetalleVenta
+    ADD
+    CONSTRAINT fk_transaccion
         FOREIGN KEY (idTransaccion) REFERENCES Transaccion(idTransaccion),
 
     CONSTRAINT fk_producto
         FOREIGN KEY (idProducto) REFERENCES Producto(idProducto)
-);
+
+
 --Producto necesita fk de categoria
 CREATE TABLE Producto(
     idProducto INT IDENTITY(1,1) PRIMARY KEY,
@@ -79,14 +91,15 @@ CREATE TABLE Producto(
     nombre VARCHAR(500) NOT NULL,
     stock INT NOT NULL,
     precio_unitario INT,
-    descripcion VARCHAR(500),
-
+    descripcion VARCHAR(500)
+);
+    ALTER TABLE Producto
+    ADD
     CONSTRAINT fk_categoria
         FOREIGN KEY (idCategoria) REFERENCES Categoria(idCategoria)
-);
 
 CREATE TABLE Categoria(
     idCategoria INT IDENTITY(1,1) PRIMARY KEY,
 
     nombre VARCHAR(100) NOT NULL
-)
+);
