@@ -3,12 +3,13 @@ CREATE TABLE Users(
     email VARCHAR(300) NOT NULL,
     psswd VARCHAR(255) NOT NULL,
     since DATETIME DEFAULT GETDATE() --el dia en que se creo el usuario
-    rol VARCHAR(250) NOT NULL --"cliente""admin"
+    rol VARCHAR(250) NOT NULL DEFAULT 'Cliente'--"cliente""admin"
 );
 --cliente debe de tener un fk desde users
 CREATE TABLE Client(
     idCliente INT IDENTITY(1,1) PRIMARY KEY, --id asignado automaticamente
-    idUser INT NOT NULL,
+    idUser INT NULL,  -- no obligatorio por que para comprar puede hacerlo como invitado
+
     nombre VARCHAR(250) NOT NULL,
     alias VARCHAR(50), -- mas facil poder filtrar personas
     domicilio VARCHAR(500) NOT NULL,
@@ -20,23 +21,44 @@ CREATE TABLE Client(
     CONSTRAINT fk_users
         FOREIGN KEY (idUser) REFERENCES Users(idUser)
 );
+
+CREATE TABLE Empleado(
+    idEmpleado INT IDENTITY(1,1) PRIMARY KEY,
+    idUser INT NOT NULL,
+
+    nombreCompleto VARCHAR(250) NOT NULL,
+    rut VARCHAR(12) NOT NULL,
+    cargo VARCHAR(50)NOT NULL,
+    contrato VARCHAR(50) NOT NULL
+    desde DATETIME DEFAULT GETDATE(),
+
+    CONSTRAINT fk_users
+        FOREIGN KEY (idUser) REFERENCES Users(idUser)
+);
+
 --transaccion necesita fk de cliente
 --transaccion necesita fk de detalle
 CREATE TABLE Transaccion(
     idTransaccion INT IDENTITY(1,1) PRIMARY KEY,
     idCliente INT NOT NULL,
+    idEmpleado INT NOT NULL,
+
     fecha DATETIME DEFAULT GETDATE(),
     sucursal VARCHAR(500) NOT NULL,
     total INT NOT NULL,
 
     CONSTRAINT fk_cliente
-        FOREIGN KEY (idCliente) REFERENCES Client(idCliente)
+        FOREIGN KEY (idCliente) REFERENCES Client(idCliente),
+
+    CONSTRAINT fk_empleado
+        FOREIGN KEY (idEmpleado) REFERENCES (idEmpleado)    
 );
 --detalle necesita fk de producto
 CREATE TABLE DetalleVenta(
     idDetalle INT IDENTITY(1,1) PRIMARY KEY,
     idTransaccion INT NOT NULL,
     idProducto INT NOT NULL,
+
     cantidad INT NOT NULL,
     descuento INT NOT NULL DEFAULT 0,
     precioUnitario INT NOT NULL,
@@ -53,6 +75,7 @@ CREATE TABLE DetalleVenta(
 CREATE TABLE Producto(
     idProducto INT IDENTITY(1,1) PRIMARY KEY,
     idCategoria INT NOT NULL,
+
     nombre VARCHAR(500) NOT NULL,
     stock INT NOT NULL,
     precio_unitario INT,
@@ -64,5 +87,6 @@ CREATE TABLE Producto(
 
 CREATE TABLE Categoria(
     idCategoria INT IDENTITY(1,1) PRIMARY KEY,
+
     nombre VARCHAR(100) NOT NULL
 )
