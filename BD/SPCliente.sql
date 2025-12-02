@@ -87,7 +87,7 @@ BEGIN
     INSERT INTO Cliente (idUser, nombre, rut, domicilio, ciudad)
     VALUES (NULL, @nombre, @rut, @domicilio, @ciudad);
 
-    SET @idCliente = SCOPE_IDENTITY(): --lo capturamos si es que se necesita mas adelante
+    SET @idCliente = SCOPE_IDENTITY(); --lo capturamos si es que se necesita mas adelante
     --mostramos el registro recien creado
     SELECT 
         idCliente,
