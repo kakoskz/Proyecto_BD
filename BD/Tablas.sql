@@ -12,6 +12,7 @@ CREATE TABLE Cliente(
 
     nombre VARCHAR(250) NOT NULL,
     alias VARCHAR(50), -- mas facil poder filtrar personas
+    rut VARCHAR(10) NOT NULL,
     domicilio VARCHAR(500) NOT NULL,
     ciudad VARCHAR(100) NOT NULL,
     genero VARCHAR(50),
@@ -29,7 +30,7 @@ CREATE TABLE Empleado(
     idUser INT NOT NULL,
 
     nombreCompleto VARCHAR(250) NOT NULL,
-    rut VARCHAR(12) NOT NULL,
+    rut VARCHAR(10) NOT NULL,
     cargo VARCHAR(50)NOT NULL,
     contrato VARCHAR(50) NOT NULL,
     desde DATETIME DEFAULT GETDATE()
