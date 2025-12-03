@@ -102,4 +102,9 @@ BEGIN
         @idUser = idUser
     FROM Empleado 
     WHERE rut = @rut;
-     
+    
+    IF @idEmpleado NULL
+    BEGIN 
+        RAISERROR('El empleado no existe', 16, 1);
+        RETURN;        
+    

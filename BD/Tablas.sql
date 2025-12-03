@@ -41,6 +41,8 @@ CREATE TABLE Empleado(
     CONSTRAINT fk_users
         FOREIGN KEY (idUser) REFERENCES Users(idUser)
 
+    ALTER TABLE Empleado
+    ADD CONSTRAINT UQEmpleadoRut UNIQUE (rut)
 --transaccion necesita fk de cliente
 --transaccion necesita fk de detalle
 CREATE TABLE Transaccion(
