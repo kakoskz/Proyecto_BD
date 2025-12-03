@@ -1,17 +1,27 @@
 <?php
-require_once 'db.php';
+require_once '../backend/db.php'; 
+$email = "admin@prueba.com";   
+$passwordRaw = "12345";        
+$rol = "Administrador";        
+$fechaActual = date('Y-m-d H:i:s');
 
-$nuevoUsuario = "admin";
-$nuevaPass = "12345"; // La contraseña que quieras
-// Encriptamos la contraseña
-$hash = password_hash($nuevaPass, PASSWORD_DEFAULT);
+$hash = password_hash($passwordRaw, PASSWORD_DEFAULT);
 
-$sql = "INSERT INTO Usuarios (NombreUsuario, PasswordHash) VALUES (?, ?)";
-$stmt = $conn->prepare($sql);
+try {
 
-if($stmt->execute([$nuevoUsuario, $hash])) {
-    echo "Usuario creado con éxito. Password encriptada: " . $hash;
-} else {
-    echo "Error al crear usuario.";
+    $sql = "INSERT INTO Users (email, psswd, rol, since) VALUES (?, ?, ?, ?)";
+    $stmt = $conn->prepare($sql);
+
+    if($stmt->execute([$email, $hash, $rol, $fechaActual])) {
+        echo "Usuario creado con éxito.<br>";
+        echo "Email: " . $email . "<br>";
+        echo "Rol: " . $rol . "<br>";
+        echo "Hash guardado: " . $hash;
+    } else {
+        echo "Error al crear usuario.";
+    }
+
+} catch (PDOException $e) {
+    echo "Error de base de datos: " . $e->getMessage();
 }
 ?>

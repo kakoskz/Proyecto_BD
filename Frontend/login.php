@@ -1,37 +1,42 @@
 <?php
 session_start();
-require_once 'db.php'; // Traemos la conexión
+
+require_once '../backend/db.php'; 
 
 $mensaje = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $usuario = $_POST['username'];
+ 
+    $email = trim($_POST['email']); 
     $password = $_POST['password'];
 
-    if (!empty($usuario) && !empty($password)) {
+    if (!empty($email) && !empty($password)) {
         try {
-            // 1. Preparamos la consulta (La ? es un marcador de posición seguro)
-            $sql = "SELECT ID, NombreUsuario, PasswordHash FROM Usuarios WHERE NombreUsuario = ?";
+
+            $sql = "SELECT idUser, email, psswd, rol FROM Users WHERE email = ?";
             $stmt = $conn->prepare($sql);
+            $stmt->execute([$email]);
             
-            // 2. Ejecutamos pasando el dato
-            $stmt->execute([$usuario]);
-            
-            // 3. Obtenemos el resultado
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // 4. Verificamos si existe el usuario y si la contraseña coincide
-            if ($user && password_verify($password, $user['PasswordHash'])) {
-                // ¡LOGIN CORRECTO!
-                $_SESSION['user_id'] = $user['ID'];
-                $_SESSION['username'] = $user['NombreUsuario'];
-                header("Location: panel.php"); // Redirigir al panel
+
+            if ($user && password_verify($password, $user['psswd'])) {
+                
+
+                session_regenerate_id(true);
+
+                $_SESSION['user_id'] = $user['idUser'];
+                $_SESSION['email'] = $user['email'];
+                $_SESSION['rol'] = $user['rol'];
+                
+                header("Location: panel.php"); 
                 exit;
             } else {
-                $mensaje = "Usuario o contraseña incorrectos.";
+                $mensaje = "Correo o contraseña incorrectos.";
             }
         } catch (PDOException $e) {
-            $mensaje = "Error en el sistema: " . $e->getMessage();
+
+            $mensaje = "Error al conectar con la base de datos.";
         }
     } else {
         $mensaje = "Por favor completa ambos campos.";
@@ -43,28 +48,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Login SQL Server</title>
+    <title>Login - Proyecto BD</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; }
-        form { border: 1px solid #ccc; padding: 20px; border-radius: 5px; background: #f9f9f9; }
-        input { display: block; margin-bottom: 10px; width: 100%; padding: 8px; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
-        .error { color: red; font-size: 0.9em; }
+        body { font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; background-color: #f4f4f4;}
+        form { border: 1px solid #ddd; padding: 30px; border-radius: 8px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 300px;}
+        input { display: block; margin-bottom: 15px; width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;}
+        button { width: 100%; padding: 10px; background: #28a745; color: white; border: none; cursor: pointer; border-radius: 4px; font-size: 16px;}
+        button:hover { background: #218838; }
+        .error { color: #dc3545; font-size: 0.9em; margin-bottom: 15px; text-align: center;}
+        h2 { text-align: center; color: #333; }
     </style>
 </head>
 <body>
 
     <form method="POST" action="">
         <h2>Iniciar Sesión</h2>
+        
         <?php if($mensaje): ?>
             <p class="error"><?php echo $mensaje; ?></p>
         <?php endif; ?>
 
-        <label>Usuario:</label>
-        <input type="text" name="username" required>
+        <label>Correo Electrónico:</label>
+        <input type="email" name="email" required placeholder="ejemplo@correo.com">
 
         <label>Contraseña:</label>
-        <input type="password" name="password" required>
+        <input type="password" name="password" required placeholder="********">
 
         <button type="submit">Entrar</button>
     </form>
