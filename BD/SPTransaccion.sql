@@ -4,7 +4,7 @@ AS
 BEGIN
     DECLARE @total INT;
 
-    SELECT @total = SUM(total_linea)
+    SELECT @total = SUM(totaLinea)
     FROM DetalleVenta
     WHERE idTransaccion = @idTransaccion;
 
@@ -21,10 +21,11 @@ BEGIN
     SELECT 
         T.idTransaccion,
         T.fecha,
-        C.nombre       AS Cliente,
+        C.nombre AS Cliente,
         T.sucursal,
         dbo.fn_TotalTransaccion(T.idTransaccion) AS TotalTransaccion
     FROM Transaccion T
-    INNER JOIN Client C ON T.idCliente = C.idCliente;
+    INNER JOIN Cliente C ON T.idCliente = C.idCliente; 
 END;
 GO
+

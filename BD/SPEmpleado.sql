@@ -15,7 +15,7 @@ BEGIN
     -- VERIFICAMOS SI ES QUE EL EMPLEADO EXISTE
     IF EXISTS(SELECT 1 FROM Empleado WHERE rut = @rut)
     BEGIN
-        RAISERROR('Empleado ya esta ingresado en la empresa'. 16, 1);
+        RAISERROR('Empleado ya esta ingresado en la empresa', 16, 1);
         RETURN;
     END 
     --SI NO EXISTE , ESTE MISMO SERA INGRESADO A LA BASE DE DATOS 
@@ -28,8 +28,8 @@ BEGIN
     SET @idUser = SCOPE_IDENTITY();
 
     --ingresamos sus datos 
-    INSERT INTO Empleado(idUser, nombre, rut, cargo, contrato)
-    VALUES (@idUser, @nombre, @rut, @cargo, @contrato)
+    INSERT INTO Empleado(idUser, nombreCompleto, rut, cargo, contrato)
+    VALUES (@idUser, @nombreCompleto, @rut, @cargo, @contrato)
 
     PRINT('Empleado ingresado correctamente')
 
@@ -37,7 +37,7 @@ END;
 
 CREATE PROCEDURE spModificarEmpleado(
     @nombre VARCHAR(250),
-    @rut VARCHAR(10);
+    @rut VARCHAR(10),
     @cargo  VARCHAR(50),
     @contrato   VARCHAR(50)
 )
@@ -51,9 +51,9 @@ BEGIN
     FROM Empleado
     WHERE rut = @rut
     -- verificamos si existe el empleado
-    IF EXISTS (SELECT 1 FROM Empleado rut = @rut);
+    IF EXISTS (SELECT 1 FROM Empleado where rut = @rut)
     BEGIN
-        UPDATE Cliente
+        UPDATE Empleado
         SET cargo = @cargo,
             contrato = @contrato
         WHERE idEmpleado = @idEmpleado;
@@ -70,11 +70,11 @@ BEGIN
     IF EXISTS(SELECT 1 FROM Empleado WHERE rut = @rut)
     BEGIN  
         SELECT 
-            E.nombre,
+            E.nombreCompleto,
             E.rut,
             U.email,
             E.cargo,
-            E.contrato,
+            E.contrato
         FROM Empleado E
         INNER JOIN Users U
         ON E.idUser = U.idUser 
@@ -96,24 +96,22 @@ BEGIN
     DECLARE @idEmpleado INT;
     DECLARE @idUser INT;
 
-
     SELECT 
-        @idEmpleado = idEmpleado
+        @idEmpleado = idEmpleado,
         @idUser = idUser
     FROM Empleado 
     WHERE rut = @rut;
-    
-    IF @idEmpleado NULL
-    BEGIN 
+
+    IF @idEmpleado IS NULL
+    BEGIN
         RAISERROR('El empleado no existe', 16, 1);
         RETURN;        
-    END
+    END;
 
-    --Eliminar el registro de empleado
     DELETE FROM Empleado WHERE idEmpleado = @idEmpleado;
 
-    --Eliminar el usuario asociado
-    DELETE FROM USERS WHERE idUser = @idUser;
+    DELETE FROM Users WHERE idUser = @idUser;
 
     PRINT 'Empleado eliminado correctamente';
-END;    
+END;
+GO
