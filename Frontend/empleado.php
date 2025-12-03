@@ -2,14 +2,12 @@
 session_start();
 require_once '../backend/db.php';
 
-// 1. VALIDAR SESIÓN Y ROL ADMINISTRADOR
+// 1. VALIDAR SESIÓN Y ROL
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
-
 if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'Administrador') {
-    // Solo admins pueden entrar a esta página
     header("Location: panel.php?error=permiso");
     exit;
 }
@@ -22,106 +20,87 @@ $modoEdicion = false;
 
 // 2. MANEJO DE FORMULARIO (CREAR / EDITAR)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
-
+    
     $accion = $_POST['action'];
 
-    // Datos del formulario
-    $email          = isset($_POST['email']) ? trim($_POST['email']) : "";
-    $passwordRaw    = isset($_POST['password']) ? $_POST['password'] : "";
-    $rolUsuario     = isset($_POST['rolUsuario']) ? trim($_POST['rolUsuario']) : "Empleado";
-    $nombre         = isset($_POST['nombre']) ? trim($_POST['nombre']) : "";
-    $rut            = isset($_POST['rut']) ? trim($_POST['rut']) : "";
-    $cargo          = isset($_POST['cargo']) ? trim($_POST['cargo']) : "";
-    $contrato       = isset($_POST['contrato']) ? trim($_POST['contrato']) : "";
+    // Recogemos datos
+    $email      = isset($_POST['email']) ? trim($_POST['email']) : "";
+    $password   = isset($_POST['password']) ? $_POST['password'] : "";
+    $rolUsuario = isset($_POST['rolUsuario']) ? $_POST['rolUsuario'] : "Empleado";
+    $nombre     = isset($_POST['nombre']) ? trim($_POST['nombre']) : "";
+    $rut        = isset($_POST['rut']) ? trim($_POST['rut']) : "";
+    $cargo      = isset($_POST['cargo']) ? trim($_POST['cargo']) : "";
+    $contrato   = isset($_POST['contrato']) ? trim($_POST['contrato']) : "";
 
     try {
-
         if ($accion === 'crear') {
-            // Validaciones simples
-            if (empty($email) || empty($passwordRaw) || empty($nombre) || empty($rut)) {
-                throw new Exception("Faltan datos obligatorios para crear el empleado.");
+            // === CREAR (Usa spInsertarEmpleado) ===
+            // Orden SP: @email, @psswd, @rol, @nombreCompleto, @rut, @cargo, @contrato
+            
+            if (empty($email) || empty($password) || empty($rut)) {
+                throw new Exception("Faltan datos obligatorios.");
             }
 
-            // Hashear contraseña para Users
-            $passwordHash = password_hash($passwordRaw, PASSWORD_DEFAULT);
+            $passHash = password_hash($password, PASSWORD_DEFAULT);
 
-            // SP PARA INSERTAR EMPLEADO (Users + Empleado)
-            // AJUSTA el nombre del SP si en tu BD se llama distinto
             $sql = "EXEC spInsertarEmpleado ?, ?, ?, ?, ?, ?, ?";
             $stmt = $conn->prepare($sql);
-            $stmt->execute([
-                $email,
-                $passwordHash,
-                $rolUsuario,     // Ej: 'Administrador' o 'Empleado'
-                $nombre,
-                $rut,
-                $cargo,
-                $contrato
-            ]);
+            $stmt->execute([$email, $passHash, $rolUsuario, $nombre, $rut, $cargo, $contrato]);
 
             $mensaje = "✅ Empleado creado correctamente.";
             $tipoMensaje = "success";
 
         } elseif ($accion === 'editar') {
-
-            if (!isset($_POST['idEmpleado'])) {
-                throw new Exception("ID de empleado no recibido.");
-            }
-
-            $idEmpleado = (int) $_POST['idEmpleado'];
-
-            // OJO: aquí supongo un SP para actualizar empleado.
-            // Si tu SP se llama distinto, cámbialo.
-            // Ejemplo de firma: spActualizarEmpleado @idEmpleado, @nombre, @rut, @cargo, @contrato, @rol
-            $sql = "EXEC spModificarEmpleado ?, ?, ?, ?, ?, ?";
+            // === EDITAR (Usa spModificarEmpleado) ===
+            // Orden SP: @nombre, @rut, @cargo, @contrato
+            // NOTA: Tu SP usa el RUT para encontrar al empleado.
+            
+            $sql = "EXEC spModificarEmpleado ?, ?, ?, ?";
             $stmt = $conn->prepare($sql);
-            $stmt->execute([
-                $idEmpleado,
-                $nombre,
-                $rut,
-                $cargo,
-                $contrato,
-                $rolUsuario
-            ]);
+            $stmt->execute([$nombre, $rut, $cargo, $contrato]);
 
-            $mensaje = "🔄 Empleado actualizado correctamente.";
+            $mensaje = "🔄 Datos actualizados (Cargo/Contrato).";
             $tipoMensaje = "success";
+            
+            // Limpiamos modo edición para volver a crear
+            $modoEdicion = false;
         }
 
     } catch (PDOException $e) {
-        $mensaje = "Error de BD: " . $e->getMessage();
+        $mensaje = "❌ Error BD: " . $e->getMessage();
+        // Limpiar mensaje de SQL Server si viene sucio
+        $errInfo = $stmt->errorInfo();
+        if(isset($errInfo[2])) $mensaje = "❌ " . $errInfo[2];
         $tipoMensaje = "error";
     } catch (Exception $e) {
-        $mensaje = "Error: " . $e->getMessage();
+        $mensaje = "❌ " . $e->getMessage();
         $tipoMensaje = "error";
     }
 }
 
-// 3. ELIMINAR EMPLEADO
-if (isset($_GET['borrar'])) {
+// 3. ELIMINAR EMPLEADO (Usa spBorrarEmpleado que pide @rut)
+if (isset($_GET['borrar_rut'])) {
     try {
-        $idBorrar = (int) $_GET['borrar'];
+        $rutBorrar = $_GET['borrar_rut']; // Recibimos RUT, no ID
 
-        // Supuesto SP: spEliminarEmpleado @idEmpleado
         $sql = "EXEC spBorrarEmpleado ?";
         $stmt = $conn->prepare($sql);
-        $stmt->execute([$idBorrar]);
+        $stmt->execute([$rutBorrar]);
 
         header("Location: empleado.php?msg=borrado");
         exit;
     } catch (PDOException $e) {
-        $mensaje = "Error al eliminar empleado: " . $e->getMessage();
+        $mensaje = "❌ Error al eliminar: " . $e->getMessage();
         $tipoMensaje = "error";
     }
 }
 
-// 4. CARGAR DATOS PARA EDICIÓN
-if (isset($_GET['editar'])) {
+// 4. CARGAR DATOS PARA EDICIÓN (Usa spObtenerEmpleado que pide @idEmpleado)
+if (isset($_GET['editar_id'])) {
     try {
         $modoEdicion = true;
-        $idEditar = (int) $_GET['editar'];
+        $idEditar = $_GET['editar_id'];
 
-        // Supuesto SP: spObtenerEmpleado @idEmpleado
         $sql = "EXEC spObtenerEmpleado ?";
         $stmt = $conn->prepare($sql);
         $stmt->execute([$idEditar]);
@@ -130,200 +109,173 @@ if (isset($_GET['editar'])) {
         if (!$empleadoEditar) {
             $modoEdicion = false;
             $mensaje = "Empleado no encontrado.";
-            $tipoMensaje = "error";
         }
-
     } catch (Exception $e) {
-        $mensaje = "Error al cargar empleado: " . $e->getMessage();
-        $tipoMensaje = "error";
+        $mensaje = "Error al cargar: " . $e->getMessage();
     }
 }
 
-// 5. LISTAR / BUSCAR EMPLEADOS
+// 5. LISTAR O BUSCAR
+// Si hay búsqueda, usamos tu spBuscarEmpleado (Busca por RUT)
+// Si no, usamos spListarEmpleados (Trae todos)
+$empleados = [];
 try {
-    // Supuesto SP: spBuscarEmpleado @textoBusqueda (si va vacío, lista todo)
-    $stmtEmp = $conn->prepare("EXEC spBuscarEmpleado ?");
-    $stmtEmp->execute([$busqueda]);
-    $empleados = $stmtEmp->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $empleados = [];
-    $mensaje = "Error al listar empleados: " . $e->getMessage();
-    $tipoMensaje = "error";
+    if (!empty($busqueda)) {
+        // Tu SP busca por RUT exacto
+        $sql = "EXEC spBuscarEmpleado ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$busqueda]);
+        // spBuscarEmpleado devuelve campos sin ID, así que la edición desde búsqueda
+        // puede ser limitada si no ajustamos el SP.
+        $empleados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        // Listado General
+        $sql = "EXEC spListarEmpleados"; 
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+        $empleados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {
+    $mensaje = "Error al cargar lista.";
 }
-
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Gestión de Empleados</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f0f2f5; }
-        .container { max-width: 1100px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h1 { margin-bottom: 10px; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f6f9; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .msg { padding: 15px; margin-bottom: 20px; border-radius: 5px; }
         .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        
+        /* Formulario */
+        .form-box { background: #fafafa; padding: 20px; border-radius: 8px; border-left: 5px solid <?php echo $modoEdicion ? '#007bff' : '#28a745'; ?>; margin-bottom: 30px; }
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        /* Botones */
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold; }
+        .btn-green { background: #28a745; }
+        .btn-blue { background: #007bff; }
+        .btn-cancel { background: #6c757d; text-decoration: none; padding: 10px 20px; border-radius: 4px; color: white; font-size: 0.9em;}
 
-        .form-box { background: #fafafa; padding: 20px; border-radius: 8px; border: 2px solid <?php echo $modoEdicion ? '#007bff' : '#28a745'; ?>; margin-bottom: 20px; }
-        .form-box h2 { margin-top: 0; }
-        .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .form-row > div { flex: 1; }
-        input, select { padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box; }
-
-        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 4px; color: white; font-weight: bold; }
-        .btn-green { background-color: #28a745; }
-        .btn-blue { background-color: #007bff; }
-        .btn-gray { background-color: #6c757d; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; }
-        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
-        th { background-color: #f8f9fa; }
-
-        .action-link { text-decoration: none; margin-right: 10px; font-size: 0.9em; }
-        .action-link.edit { color: #007bff; }
-        .action-link.delete { color: #dc3545; }
+        /* Tabla */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background-color: #343a40; color: white; }
+        .actions a { margin-right: 10px; text-decoration: none; font-weight: bold; }
+        .edit { color: #007bff; }
+        .delete { color: #dc3545; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="top-bar">
-        <h1>👔 Gestión de Empleados</h1>
-        <a href="panel.php" class="action-link">⬅ Volver al panel</a>
-    </div>
+    <a href="panel.php" style="text-decoration:none; color: #555;">⬅ Volver al Panel</a>
+    <h1>Gestión de Empleados</h1>
 
-    <?php if (!empty($mensaje)): ?>
-        <div class="msg <?php echo $tipoMensaje; ?>">
-            <?php echo htmlspecialchars($mensaje); ?>
-        </div>
+    <?php if ($mensaje): ?>
+        <div class="msg <?php echo $tipoMensaje; ?>"><?php echo htmlspecialchars($mensaje); ?></div>
     <?php endif; ?>
 
-    <!-- FORMULARIO CREAR / EDITAR -->
     <div class="form-box">
-        <h2><?php echo $modoEdicion ? "Editar Empleado" : "Crear Nuevo Empleado"; ?></h2>
+        <h3><?php echo $modoEdicion ? '✏️ Editar Empleado' : '➕ Nuevo Empleado'; ?></h3>
+        
         <form method="POST">
             <input type="hidden" name="action" value="<?php echo $modoEdicion ? 'editar' : 'crear'; ?>">
-            <?php if ($modoEdicion && $empleadoEditar): ?>
-                <input type="hidden" name="idEmpleado" value="<?php echo $empleadoEditar['idEmpleado']; ?>">
-            <?php endif; ?>
-
+            
             <div class="form-row">
-                <div>
-                    <label>Email (usuario):</label>
-                    <input type="email" name="email"
-                        value="<?php echo $modoEdicion && isset($empleadoEditar['email']) ? htmlspecialchars($empleadoEditar['email']) : ''; ?>"
-                        <?php echo $modoEdicion ? 'readonly' : ''; ?>>
-                </div>
-                <div>
-                    <label>Rol:</label>
-                    <select name="rolUsuario">
-                        <?php
-                        $rolActual = $modoEdicion && isset($empleadoEditar['rol']) ? $empleadoEditar['rol'] : 'Empleado';
-                        ?>
-                        <option value="Empleado"      <?php echo $rolActual === 'Empleado' ? 'selected' : ''; ?>>Empleado</option>
-                        <option value="Administrador" <?php echo $rolActual === 'Administrador' ? 'selected' : ''; ?>>Administrador</option>
-                    </select>
-                </div>
+                <input type="email" name="email" placeholder="Email (Usuario)" required 
+                       value="<?php echo $modoEdicion ? htmlspecialchars($empleadoEditar['email']) : ''; ?>"
+                       <?php echo $modoEdicion ? 'readonly style="background:#e9ecef;"' : ''; ?>>
+                
+                <select name="rolUsuario" <?php echo $modoEdicion ? 'disabled' : ''; ?>>
+                    <option value="Empleado">Rol: Empleado</option>
+                    <option value="Administrador" <?php if($modoEdicion && $empleadoEditar['rol']=='Administrador') echo 'selected'; ?>>Rol: Administrador</option>
+                </select>
             </div>
 
             <?php if (!$modoEdicion): ?>
-            <div class="form-row">
-                <div>
-                    <label>Contraseña:</label>
-                    <input type="password" name="password" placeholder="Contraseña inicial">
+                <div class="form-row">
+                    <input type="password" name="password" placeholder="Contraseña" required>
                 </div>
-            </div>
-            <?php else: ?>
-            <p style="font-size: 0.9em; color:#555;">
-                * La contraseña no se modifica desde aquí. Si necesitas cambiarla, hazlo en el módulo correspondiente.
-            </p>
             <?php endif; ?>
 
             <div class="form-row">
-                <div>
-                    <label>Nombre completo:</label>
-                    <input type="text" name="nombre"
-                        value="<?php echo $modoEdicion ? htmlspecialchars($empleadoEditar['nombre']) : ''; ?>">
-                </div>
-                <div>
-                    <label>RUT:</label>
-                    <input type="text" name="rut"
-                        value="<?php echo $modoEdicion ? htmlspecialchars($empleadoEditar['rut']) : ''; ?>">
-                </div>
+                <input type="text" name="nombre" placeholder="Nombre Completo" required
+                       value="<?php echo $modoEdicion ? htmlspecialchars($empleadoEditar['nombre']) : ''; ?>">
+                
+                <input type="text" name="rut" placeholder="RUT (ej: 12345678-9)" required
+                       value="<?php echo $modoEdicion ? htmlspecialchars($empleadoEditar['rut']) : ''; ?>"
+                       <?php echo $modoEdicion ? 'readonly style="background:#e9ecef;"' : ''; ?>>
             </div>
 
             <div class="form-row">
-                <div>
-                    <label>Cargo:</label>
-                    <input type="text" name="cargo"
-                        value="<?php echo $modoEdicion ? htmlspecialchars($empleadoEditar['cargo']) : ''; ?>">
-                </div>
-                <div>
-                    <label>Tipo de contrato:</label>
-                    <input type="text" name="contrato"
-                        value="<?php echo $modoEdicion ? htmlspecialchars($empleadoEditar['contrato']) : ''; ?>"
-                        placeholder="Indefinido, Plazo fijo, etc.">
-                </div>
+                <input type="text" name="cargo" placeholder="Cargo" required
+                       value="<?php echo $modoEdicion ? htmlspecialchars($empleadoEditar['cargo']) : ''; ?>">
+                
+                <input type="text" name="contrato" placeholder="Tipo de Contrato" required
+                       value="<?php echo $modoEdicion ? htmlspecialchars($empleadoEditar['contrato']) : ''; ?>">
             </div>
 
-            <div style="margin-top: 15px;">
-                <button type="submit" class="<?php echo $modoEdicion ? 'btn-blue' : 'btn-green'; ?>">
-                    <?php echo $modoEdicion ? 'Guardar cambios' : 'Crear empleado'; ?>
-                </button>
-                <?php if ($modoEdicion): ?>
-                    <a href="empleado.php" class="action-link">Cancelar edición</a>
-                <?php endif; ?>
-            </div>
+            <button type="submit" class="btn <?php echo $modoEdicion ? 'btn-blue' : 'btn-green'; ?>">
+                <?php echo $modoEdicion ? 'Actualizar Datos' : 'Guardar Empleado'; ?>
+            </button>
+            
+            <?php if ($modoEdicion): ?>
+                <a href="empleado.php" class="btn-cancel">Cancelar</a>
+            <?php endif; ?>
         </form>
     </div>
 
-    <!-- BUSCADOR -->
-    <form method="POST" style="display:flex; gap:10px; max-width: 400px; margin-bottom: 10px;">
-        <input type="text" name="busqueda" placeholder="Buscar por nombre, RUT, cargo..."
-               value="<?php echo htmlspecialchars($busqueda); ?>">
-        <button type="submit" class="btn-blue">🔍 Buscar</button>
+    <hr>
+
+    <form method="POST" style="display:flex; gap:10px; max-width: 400px; margin-bottom: 20px;">
+        <input type="text" name="busqueda" placeholder="Buscar por RUT exacto..." value="<?php echo htmlspecialchars($busqueda); ?>">
+        <button type="submit" class="btn btn-blue">🔍 Buscar</button>
+        <?php if($busqueda): ?><a href="empleado.php" style="align-self:center;">Limpiar</a><?php endif; ?>
     </form>
 
-    <!-- TABLA LISTADO EMPLEADOS -->
     <table>
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Nombre</th>
                 <th>RUT</th>
+                <th>Nombre</th>
+                <th>Email</th>
                 <th>Cargo</th>
                 <th>Contrato</th>
-                <th>Rol Usuario</th>
-                <th>Desde</th>
                 <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
-        <?php if (!empty($empleados)): ?>
-            <?php foreach ($empleados as $emp): ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($emp['idEmpleado']); ?></td>
-                    <td><?php echo htmlspecialchars($emp['nombre']); ?></td>
-                    <td><?php echo htmlspecialchars($emp['rut']); ?></td>
-                    <td><?php echo htmlspecialchars($emp['cargo']); ?></td>
-                    <td><?php echo htmlspecialchars($emp['contrato']); ?></td>
-                    <td><?php echo isset($emp['rol']) ? htmlspecialchars($emp['rol']) : ''; ?></td>
-                    <td><?php echo isset($emp['desde']) ? htmlspecialchars($emp['desde']) : ''; ?></td>
-                    <td>
-                        <a href="empleado.php?editar=<?php echo $emp['idEmpleado']; ?>" class="action-link edit">Editar</a>
-                        <a href="empleado.php?borrar=<?php echo $emp['idEmpleado']; ?>"
-                           class="action-link delete"
-                           onclick="return confirm('¿Seguro que quieres eliminar este empleado?');">
-                           Eliminar
-                        </a>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        <?php else: ?>
-            <tr><td colspan="8">No se encontraron empleados.</td></tr>
-        <?php endif; ?>
+            <?php if (count($empleados) > 0): ?>
+                <?php foreach ($empleados as $emp): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($emp['rut']); ?></td>
+                        <td><?php echo htmlspecialchars(isset($emp['nombreCompleto']) ? $emp['nombreCompleto'] : $emp['nombre']); ?></td>
+                        <td><?php echo htmlspecialchars($emp['email']); ?></td>
+                        <td><?php echo htmlspecialchars($emp['cargo']); ?></td>
+                        <td><?php echo htmlspecialchars($emp['contrato']); ?></td>
+                        <td class="actions">
+                            <?php if(isset($emp['idEmpleado'])): ?>
+                                <a href="empleado.php?editar_id=<?php echo $emp['idEmpleado']; ?>" class="edit">Editar</a>
+                            <?php endif; ?>
+                            
+                            <a href="empleado.php?borrar_rut=<?php echo $emp['rut']; ?>" 
+                               class="delete"
+                               onclick="return confirm('¿Seguro que deseas eliminar al empleado con RUT <?php echo $emp['rut']; ?>?');">
+                               Eliminar
+                            </a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <tr><td colspan="6" style="text-align:center;">No se encontraron empleados.</td></tr>
+            <?php endif; ?>
         </tbody>
     </table>
 

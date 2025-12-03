@@ -122,7 +122,7 @@ AS
 BEGIN
     SELECT 
         E.idEmpleado,
-        E.nombre,
+        E.nombreCompleto AS nombre,
         E.rut,
         E.cargo,
         E.contrato,
