@@ -106,3 +106,12 @@ CREATE TABLE Categoria(
 
     nombre VARCHAR(100) NOT NULL
 );
+
+CREATE TABLE LogDetalleVenta(
+    idLog INT IDENTITY(1,1) PRIMARY KEY,
+    idDetalle INT,
+    idTransaccion INT,
+    idProducto INT,
+    cantidad INT,
+    fechaRegistro DATETIME DEFAULT GETDATE()
+);
