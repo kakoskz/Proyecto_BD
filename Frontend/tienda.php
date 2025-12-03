@@ -376,7 +376,7 @@ foreach ($carrito as $item) {
                         <td><?php echo $item['precio'] * $item['cantidad']; ?></td>
                         <td>
                             <a class="link-remove"
-                               href="venta.php?remove=<?php echo $item['idProducto']; ?>"
+                               href="tienda.php?remove=<?php echo $item['idProducto']; ?>"
                                onclick="return confirm('¿Quitar este producto del carrito?');">
                                X
                             </a>
@@ -391,7 +391,7 @@ foreach ($carrito as $item) {
             </table>
 
             <p>
-                <a href="venta.php?vaciar=1" class="link-remove"
+                <a href="tienda.php?vaciar=1" class="link-remove"
                    onclick="return confirm('¿Vaciar todo el carrito?');">
                     Vaciar carrito
                 </a>
