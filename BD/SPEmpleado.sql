@@ -107,4 +107,13 @@ BEGIN
     BEGIN 
         RAISERROR('El empleado no existe', 16, 1);
         RETURN;        
-    
+    END
+
+    --Eliminar el registro de empleado
+    DELETE FROM Empleado WHERE idEmpleado = @idEmpleado;
+
+    --Eliminar el usuario asociado
+    DELETE FROM USERS WHERE idUser = @idUser;
+
+    PRINT 'Empleado eliminado correctamente';
+END;    
