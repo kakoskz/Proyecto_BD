@@ -85,3 +85,21 @@ BEGIN
         SELECT 'Empleado no encontrado, ingrese nuevamente' AS Mensaje
     END
 END;            
+
+CREATE PROCEDURE spBorrarEmpleado(
+    @rut VARCHAR(10)
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @idEmpleado INT;
+    DECLARE @idUser INT;
+
+
+    SELECT 
+        @idEmpleado = idEmpleado
+        @idUser = idUser
+    FROM Empleado 
+    WHERE rut = @rut;
+     
