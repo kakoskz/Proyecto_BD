@@ -108,3 +108,22 @@ BEGIN
     DELETE FROM Producto
     WHERE idProducto = @idProducto;
 END;
+
+CREATE PROCEDURE sp_Categoria_Listar
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT idCategoria, nombre FROM dbo.Categoria;
+END
+GO
+
+CREATE PROCEDURE spObtenerProducto
+    @idProducto INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT idProducto, idCategoria, nombre, stock, precio_unitario, descripcion 
+    FROM Producto 
+    WHERE idProducto = @idProducto;
+END
+GO
