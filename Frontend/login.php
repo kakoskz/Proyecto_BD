@@ -1,28 +1,23 @@
 <?php
 session_start();
-
 require_once '../backend/db.php'; 
 
 $mensaje = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
- 
+
     $email = trim($_POST['email']); 
     $password = $_POST['password'];
 
     if (!empty($email) && !empty($password)) {
         try {
-
-            $sql = "SELECT idUser, email, psswd, rol FROM Users WHERE email = ?";
+            $sql = "EXEC sp_ValidarLogin ?";
+            
             $stmt = $conn->prepare($sql);
             $stmt->execute([$email]);
-            
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-
             if ($user && password_verify($password, $user['psswd'])) {
                 
-
                 session_regenerate_id(true);
 
                 $_SESSION['user_id'] = $user['idUser'];
@@ -34,8 +29,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } else {
                 $mensaje = "Correo o contraseña incorrectos.";
             }
+        
         } catch (PDOException $e) {
-
+     
             $mensaje = "Error al conectar con la base de datos.";
         }
     } else {
@@ -43,7 +39,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
