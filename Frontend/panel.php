@@ -76,7 +76,7 @@ $rol = isset($_SESSION['rol']) ? $_SESSION['rol'] : 'Empleado';
                 <p>Gestionar productos, stock y precios.</p>
             </a>
 
-            <a href="#" onclick="alert('Módulo de Punto de Venta en construcción')" class="card ventas">
+            <a href="tienda.php" onclick="alert('Módulo de Punto de Venta en construcción')" class="card ventas">
                 <span class="icon">🛒</span>
                 <h3>Nueva Venta</h3>
                 <p>Registrar ventas y facturación.</p>
