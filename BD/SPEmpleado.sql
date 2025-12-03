@@ -115,3 +115,21 @@ BEGIN
     PRINT 'Empleado eliminado correctamente';
 END;
 GO
+
+CREATE PROCEDURE spObtenerEmpleado
+    @idEmpleado INT
+AS
+BEGIN
+    SELECT 
+        E.idEmpleado,
+        E.nombre,
+        E.rut,
+        E.cargo,
+        E.contrato,
+        U.email,
+        U.rol,
+        U.since AS desde
+    FROM Empleado E
+    INNER JOIN Users U ON E.idUser = U.idUser
+    WHERE E.idEmpleado = @idEmpleado;
+END
