@@ -23,7 +23,7 @@ BEGIN
 --segundo validamos si es que existe el CLIENTE
         IF EXISTS(SELECT 1 FROM Cliente WHERE rut = @rut)
     BEGIN 
-        RAISERROR('El cliente ya existe (RUT DUPLICADO', 16, 1);
+        RAISERROR('El cliente ya existe (RUT DUPLICADO)', 16, 1);
         RETURN;
     END
     INSERT INTO Users (email, psswd)
