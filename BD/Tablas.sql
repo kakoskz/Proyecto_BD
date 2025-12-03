@@ -29,7 +29,7 @@ CREATE TABLE Empleado(
     idEmpleado INT IDENTITY(1,1) PRIMARY KEY,
     idUser INT NOT NULL,
 
-    nombreCompleto VARCHAR(250) NOT NULL,
+    nombre VARCHAR(250) NOT NULL,
     rut VARCHAR(10) NOT NULL,
     cargo VARCHAR(50)NOT NULL,
     contrato VARCHAR(50) NOT NULL,
